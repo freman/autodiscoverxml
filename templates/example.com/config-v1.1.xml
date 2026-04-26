@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  When the emailaddress query param is provided, .Email is set and Go template
+  substitution runs server-side:
+    {{.Email}}        -> user@example.com
+    {{.Email.User}}   -> user
+    {{.Email.Domain}} -> example.com
+
+  When the param is omitted, .Email is nil and the {{else}} branches fall
+  through to Mozilla's own client-side substitution tokens, which compliant
+  clients expand themselves:
+    %EMAILADDRESS%    -> full address
+    %EMAILLOCALPART%  -> local part only
+    %EMAILDOMAIN%     -> domain only
+-->
+<clientConfig version="1.1">
+  <emailProvider id="example.com">
+    <domain>example.com</domain>
+    <displayName>Example Mail</displayName>
+    <displayShortName>Example</displayShortName>
+    <incomingServer type="imap">
+      <hostname>mail.example.com</hostname>
+      <port>993</port>
+      <socketType>SSL</socketType>
+      <authentication>password-cleartext</authentication>
+      <username>{{if .Email}}{{.Email}}{{else}}%EMAILADDRESS%{{end}}</username>
+    </incomingServer>
+    <outgoingServer type="smtp">
+      <hostname>mail.example.com</hostname>
+      <port>465</port>
+      <socketType>SSL</socketType>
+      <authentication>password-cleartext</authentication>
+      <username>{{if .Email}}{{.Email}}{{else}}%EMAILADDRESS%{{end}}</username>
+    </outgoingServer>
+  </emailProvider>
+</clientConfig>

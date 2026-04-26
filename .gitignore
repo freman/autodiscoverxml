@@ -1,0 +1,7 @@
+autodiscover
+autodiscoverxml
+*.exe
+
+# operator templates - add your domain directories here, not in templates/example.com/
+templates/*/
+!templates/example.com/

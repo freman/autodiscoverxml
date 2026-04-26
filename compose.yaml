@@ -1,0 +1,8 @@
+services:
+  autodiscover:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./templates:/templates:ro
+    restart: unless-stopped
