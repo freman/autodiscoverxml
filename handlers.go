@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"html/template"
+	"text/template"
 	"io"
 	"log/slog"
 	"net"
