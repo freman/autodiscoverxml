@@ -14,6 +14,7 @@ type ServerConfig struct {
 }
 
 type DomainConfig struct {
+	Domain      string       `json:"domain"`
 	DisplayName string       `json:"display_name"`
 	ShortName   string       `json:"short_name"`
 	IMAP        ServerConfig `json:"imap"`

@@ -14,8 +14,8 @@
     %EMAILDOMAIN%     -> domain only
 -->
 <clientConfig version="1.1">
-  <emailProvider id="{{with .Email}}{{.Domain}}{{end}}">
-    <domain>{{with .Email}}{{.Domain}}{{end}}</domain>
+  <emailProvider id="{{if .Email}}{{.Email.Domain}}{{else}}{{.Config.Domain}}{{end}}">
+    <domain>{{if .Email}}{{.Email.Domain}}{{else}}{{.Config.Domain}}{{end}}</domain>
     <displayName>{{.Config.DisplayName}}</displayName>
     <displayShortName>{{.Config.ShortName}}</displayShortName>
     <incomingServer type="imap">

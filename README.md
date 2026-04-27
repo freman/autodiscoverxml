@@ -83,15 +83,23 @@ stripped). Given a request to `autodiscover.example.com`:
 ```
 
 Templates are rendered with Go's `text/template`. The static XML structure of
-the template is output as-is.
+the template is output as-is. Server names, ports, and any other values can be
+hardcoded directly in the template XML - no `config.json` required. The
+variables below are available if you want them; ignore them if you don't.
 
 ### Template Variables
+
+`.Email` is always available when a valid address was provided. `.Config` is
+available when a `config.json` exists in the domain directory - otherwise it is
+`nil`. Both are entirely optional; a template with nothing but hardcoded XML
+and `{{.Email}}` for the login name will probably work fine, depending on mail client.
 
 | Expression | Example output |
 |------------|----------------|
 | `{{.Email}}` | `user@example.com` |
 | `{{.Email.User}}` | `user` |
 | `{{.Email.Domain}}` | `example.com` |
+| `{{.Config.Domain}}` | `example.com` |
 | `{{.Config.DisplayName}}` | `Example Mail` |
 | `{{.Config.ShortName}}` | `Example` |
 | `{{.Config.IMAP.Host}}` | `mail.example.com` |
@@ -103,9 +111,6 @@ the template is output as-is.
 | `{{.Config.SMTP.SocketType}}` | `SSL` |
 | `{{.Config.SMTP.Auth}}` | `password-cleartext` |
 
-`.Config` is `nil` when no `config.json` is present - templates that don't
-reference it work fine without one.
-
 ### Domain Config
 
 An optional `config.json` in each domain directory lets you define server
@@ -114,6 +119,7 @@ the same values in two files:
 
 ```json
 {
+  "domain": "example.com",
   "display_name": "Example Mail",
   "short_name": "Example",
   "imap": {
@@ -195,8 +201,8 @@ committed - your actual domain directories are gitignored by default.
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <clientConfig version="1.1">
-  <emailProvider id="{{with .Email}}{{.Domain}}{{end}}">
-    <domain>{{with .Email}}{{.Domain}}{{end}}</domain>
+  <emailProvider id="{{if .Email}}{{.Email.Domain}}{{else}}{{.Config.Domain}}{{end}}">
+    <domain>{{if .Email}}{{.Email.Domain}}{{else}}{{.Config.Domain}}{{end}}</domain>
     <displayName>{{.Config.DisplayName}}</displayName>
     <displayShortName>{{.Config.ShortName}}</displayShortName>
     <incomingServer type="imap">

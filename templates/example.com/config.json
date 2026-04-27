@@ -1,4 +1,5 @@
 {
+  "domain": "example.com",
   "display_name": "Example Mail",
   "short_name": "Example",
   "imap": {
