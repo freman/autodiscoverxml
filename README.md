@@ -79,11 +79,11 @@ stripped). Given a request to `autodiscover.example.com`:
   autodiscover.example.com/
     autodiscover.xml      <- Outlook autodiscover response
     config-v1.1.xml       <- Mozilla autoconfig response
+    config.json           <- optional domain config (see below)
 ```
 
-Templates are rendered with Go's `html/template`. Values in `{{}}` actions are
-XML-escaped automatically. The static XML structure of the template is output
-as-is.
+Templates are rendered with Go's `text/template`. The static XML structure of
+the template is output as-is.
 
 ### Template Variables
 
@@ -92,6 +92,47 @@ as-is.
 | `{{.Email}}` | `user@example.com` |
 | `{{.Email.User}}` | `user` |
 | `{{.Email.Domain}}` | `example.com` |
+| `{{.Config.DisplayName}}` | `Example Mail` |
+| `{{.Config.ShortName}}` | `Example` |
+| `{{.Config.IMAP.Host}}` | `mail.example.com` |
+| `{{.Config.IMAP.Port}}` | `993` |
+| `{{.Config.IMAP.SocketType}}` | `SSL` |
+| `{{.Config.IMAP.Auth}}` | `password-cleartext` |
+| `{{.Config.SMTP.Host}}` | `mail.example.com` |
+| `{{.Config.SMTP.Port}}` | `465` |
+| `{{.Config.SMTP.SocketType}}` | `SSL` |
+| `{{.Config.SMTP.Auth}}` | `password-cleartext` |
+
+`.Config` is `nil` when no `config.json` is present - templates that don't
+reference it work fine without one.
+
+### Domain Config
+
+An optional `config.json` in each domain directory lets you define server
+settings once and reference them from both templates, rather than hardcoding
+the same values in two files:
+
+```json
+{
+  "display_name": "Example Mail",
+  "short_name": "Example",
+  "imap": {
+    "host": "mail.example.com",
+    "port": 993,
+    "socket_type": "SSL",
+    "auth": "password-cleartext"
+  },
+  "smtp": {
+    "host": "mail.example.com",
+    "port": 465,
+    "socket_type": "SSL",
+    "auth": "password-cleartext"
+  }
+}
+```
+
+`socket_type` is a string: `SSL`, `STARTTLS`, or `plain`. If the file exists
+but is not valid JSON, the service returns `500`.
 
 ### Error Responses
 
@@ -115,27 +156,32 @@ committed - your actual domain directories are gitignored by default.
 ### Outlook (`autodiscover.xml`)
 
 ```xml
+<?xml version="1.0" encoding="UTF-8"?>
 <Autodiscover xmlns="http://schemas.microsoft.com/exchange/autodiscover/responseschema/2006">
   <Response xmlns="http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a">
     <User>
-      <DisplayName>{{.Email}}</DisplayName>
+      <DisplayName>{{.Config.DisplayName}} - {{.Email.User}}</DisplayName>
     </User>
     <Account>
       <AccountType>email</AccountType>
       <Action>settings</Action>
       <Protocol>
         <Type>IMAP</Type>
-        <Server>mail.example.com</Server>
-        <Port>993</Port>
-        <SSL>on</SSL>
+        <Server>{{.Config.IMAP.Host}}</Server>
+        <Port>{{.Config.IMAP.Port}}</Port>
+        <DomainRequired>off</DomainRequired>
+        <SPA>off</SPA>
+        <SSL>{{if eq .Config.IMAP.SocketType "SSL"}}on{{else}}off{{end}}</SSL>
         <AuthRequired>on</AuthRequired>
         <LoginName>{{.Email}}</LoginName>
       </Protocol>
       <Protocol>
         <Type>SMTP</Type>
-        <Server>mail.example.com</Server>
-        <Port>465</Port>
-        <SSL>on</SSL>
+        <Server>{{.Config.SMTP.Host}}</Server>
+        <Port>{{.Config.SMTP.Port}}</Port>
+        <DomainRequired>off</DomainRequired>
+        <SPA>off</SPA>
+        <SSL>{{if eq .Config.SMTP.SocketType "SSL"}}on{{else}}off{{end}}</SSL>
         <AuthRequired>on</AuthRequired>
         <LoginName>{{.Email}}</LoginName>
       </Protocol>
@@ -149,22 +195,23 @@ committed - your actual domain directories are gitignored by default.
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <clientConfig version="1.1">
-  <emailProvider id="example.com">
-    <domain>example.com</domain>
-    <displayName>Example Mail</displayName>
+  <emailProvider id="{{with .Email}}{{.Domain}}{{end}}">
+    <domain>{{with .Email}}{{.Domain}}{{end}}</domain>
+    <displayName>{{.Config.DisplayName}}</displayName>
+    <displayShortName>{{.Config.ShortName}}</displayShortName>
     <incomingServer type="imap">
-      <hostname>mail.example.com</hostname>
-      <port>993</port>
-      <socketType>SSL</socketType>
-      <authentication>password-cleartext</authentication>
-      <username>{{.Email}}</username>
+      <hostname>{{.Config.IMAP.Host}}</hostname>
+      <port>{{.Config.IMAP.Port}}</port>
+      <socketType>{{.Config.IMAP.SocketType}}</socketType>
+      <authentication>{{.Config.IMAP.Auth}}</authentication>
+      <username>{{if .Email}}{{.Email}}{{else}}%EMAILADDRESS%{{end}}</username>
     </incomingServer>
     <outgoingServer type="smtp">
-      <hostname>mail.example.com</hostname>
-      <port>465</port>
-      <socketType>SSL</socketType>
-      <authentication>password-cleartext</authentication>
-      <username>{{.Email}}</username>
+      <hostname>{{.Config.SMTP.Host}}</hostname>
+      <port>{{.Config.SMTP.Port}}</port>
+      <socketType>{{.Config.SMTP.SocketType}}</socketType>
+      <authentication>{{.Config.SMTP.Auth}}</authentication>
+      <username>{{if .Email}}{{.Email}}{{else}}%EMAILADDRESS%{{end}}</username>
     </outgoingServer>
   </emailProvider>
 </clientConfig>
@@ -282,4 +329,4 @@ fast.
 ## Notes
 
 - Logs via `log/slog` in structured text format
-- No config files - flags and templates are all you need
+- Flags and templates are all you need - `config.json` is optional

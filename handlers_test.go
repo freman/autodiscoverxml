@@ -78,6 +78,70 @@ func newTestHandler(t *testing.T) (*handler, string) {
 	return &handler{templatesRoot: dir}, domain
 }
 
+func newTestHandlerWithConfig(t *testing.T, cfgJSON string) (*handler, string) {
+	t.Helper()
+	h, domain := newTestHandler(t)
+	tmplPath := filepath.Join(h.templatesRoot, domain, "autodiscover.xml")
+	if err := os.WriteFile(tmplPath, []byte(`<r><name>{{if .Config}}{{.Config.DisplayName}}{{else}}no-config{{end}}</name></r>`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if cfgJSON != "" {
+		cfgPath := filepath.Join(h.templatesRoot, domain, "config.json")
+		if err := os.WriteFile(cfgPath, []byte(cfgJSON), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	return h, domain
+}
+
+func TestDomainConfig(t *testing.T) {
+	validBody := `<Autodiscover><Request><EMailAddress>user@example.com</EMailAddress></Request></Autodiscover>`
+
+	t.Run("no config.json renders successfully with nil Config", func(t *testing.T) {
+		h, domain := newTestHandlerWithConfig(t, "")
+		req := httptest.NewRequest(http.MethodPost, "/autodiscover/autodiscover.xml", strings.NewReader(validBody))
+		req.Host = domain
+		rec := httptest.NewRecorder()
+		if err := h.autodiscover(echo.NewContext(req, rec)); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if rec.Code != http.StatusOK {
+			t.Errorf("status = %d, want 200", rec.Code)
+		}
+		if !strings.Contains(rec.Body.String(), "no-config") {
+			t.Errorf("expected no-config branch, got: %s", rec.Body.String())
+		}
+	})
+
+	t.Run("valid config.json populates Config in template", func(t *testing.T) {
+		cfg := `{"display_name":"Test Mail","imap":{"host":"imap.test.com","port":993,"socket_type":"SSL"},"smtp":{"host":"smtp.test.com","port":465,"socket_type":"SSL"}}`
+		h, domain := newTestHandlerWithConfig(t, cfg)
+		req := httptest.NewRequest(http.MethodPost, "/autodiscover/autodiscover.xml", strings.NewReader(validBody))
+		req.Host = domain
+		rec := httptest.NewRecorder()
+		if err := h.autodiscover(echo.NewContext(req, rec)); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if rec.Code != http.StatusOK {
+			t.Errorf("status = %d, want 200", rec.Code)
+		}
+		if !strings.Contains(rec.Body.String(), "Test Mail") {
+			t.Errorf("expected display name in output, got: %s", rec.Body.String())
+		}
+	})
+
+	t.Run("invalid config.json returns 500", func(t *testing.T) {
+		h, domain := newTestHandlerWithConfig(t, `{not valid json`)
+		req := httptest.NewRequest(http.MethodPost, "/autodiscover/autodiscover.xml", strings.NewReader(validBody))
+		req.Host = domain
+		err := h.autodiscover(echo.NewContext(req, httptest.NewRecorder()))
+		if echoErr(t, err).Code != http.StatusInternalServerError {
+			t.Errorf("want 500, got %d", echoErr(t, err).Code)
+		}
+	})
+}
+
 func echoErr(t *testing.T, err error) *echo.HTTPError {
 	t.Helper()
 	var he *echo.HTTPError

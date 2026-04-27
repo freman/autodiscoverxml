@@ -79,6 +79,13 @@ func (h *handler) render(c *echo.Context, tmplFile string, email *Email) error {
 		return httpErrBadRequest
 	}
 
+	cfg, err := loadDomainConfig(filepath.Join(h.templatesRoot, domain, "config.json"))
+	if err != nil {
+		slog.Error("config load", "domain", domain, "err", err)
+
+		return httpErrInternal
+	}
+
 	tmplPath := filepath.Join(h.templatesRoot, domain, tmplFile)
 	tmpl, err := template.ParseFiles(tmplPath)
 	if err != nil {
@@ -88,7 +95,11 @@ func (h *handler) render(c *echo.Context, tmplFile string, email *Email) error {
 	}
 
 	var buf bytes.Buffer
-	data := struct{ Email *Email }{Email: email}
+	data := struct {
+		Email  *Email
+		Config *DomainConfig
+	}{Email: email, Config: cfg}
+
 	if err := tmpl.Execute(&buf, data); err != nil {
 		slog.Error("template execute", "domain", domain, "err", err)
 

@@ -1,0 +1,16 @@
+{
+  "display_name": "Example Mail",
+  "short_name": "Example",
+  "imap": {
+    "host": "mail.example.com",
+    "port": 993,
+    "socket_type": "SSL",
+    "auth": "password-cleartext"
+  },
+  "smtp": {
+    "host": "mail.example.com",
+    "port": 465,
+    "socket_type": "SSL",
+    "auth": "password-cleartext"
+  }
+}

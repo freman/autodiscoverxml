@@ -14,22 +14,22 @@
     %EMAILDOMAIN%     -> domain only
 -->
 <clientConfig version="1.1">
-  <emailProvider id="example.com">
-    <domain>example.com</domain>
-    <displayName>Example Mail</displayName>
-    <displayShortName>Example</displayShortName>
+  <emailProvider id="{{with .Email}}{{.Domain}}{{end}}">
+    <domain>{{with .Email}}{{.Domain}}{{end}}</domain>
+    <displayName>{{.Config.DisplayName}}</displayName>
+    <displayShortName>{{.Config.ShortName}}</displayShortName>
     <incomingServer type="imap">
-      <hostname>mail.example.com</hostname>
-      <port>993</port>
-      <socketType>SSL</socketType>
-      <authentication>password-cleartext</authentication>
+      <hostname>{{.Config.IMAP.Host}}</hostname>
+      <port>{{.Config.IMAP.Port}}</port>
+      <socketType>{{.Config.IMAP.SocketType}}</socketType>
+      <authentication>{{.Config.IMAP.Auth}}</authentication>
       <username>{{if .Email}}{{.Email}}{{else}}%EMAILADDRESS%{{end}}</username>
     </incomingServer>
     <outgoingServer type="smtp">
-      <hostname>mail.example.com</hostname>
-      <port>465</port>
-      <socketType>SSL</socketType>
-      <authentication>password-cleartext</authentication>
+      <hostname>{{.Config.SMTP.Host}}</hostname>
+      <port>{{.Config.SMTP.Port}}</port>
+      <socketType>{{.Config.SMTP.SocketType}}</socketType>
+      <authentication>{{.Config.SMTP.Auth}}</authentication>
       <username>{{if .Email}}{{.Email}}{{else}}%EMAILADDRESS%{{end}}</username>
     </outgoingServer>
   </emailProvider>

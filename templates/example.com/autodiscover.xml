@@ -2,28 +2,28 @@
 <Autodiscover xmlns="http://schemas.microsoft.com/exchange/autodiscover/responseschema/2006">
   <Response xmlns="http://schemas.microsoft.com/exchange/autodiscover/outlook/responseschema/2006a">
     <User>
-      <DisplayName>{{.Email}}</DisplayName>
+      <DisplayName>{{.Config.DisplayName}} - {{.Email.User}}</DisplayName>
     </User>
     <Account>
       <AccountType>email</AccountType>
       <Action>settings</Action>
       <Protocol>
         <Type>IMAP</Type>
-        <Server>mail.example.com</Server>
-        <Port>993</Port>
+        <Server>{{.Config.IMAP.Host}}</Server>
+        <Port>{{.Config.IMAP.Port}}</Port>
         <DomainRequired>off</DomainRequired>
         <SPA>off</SPA>
-        <SSL>on</SSL>
+        <SSL>{{if eq .Config.IMAP.SocketType "SSL"}}on{{else}}off{{end}}</SSL>
         <AuthRequired>on</AuthRequired>
         <LoginName>{{.Email}}</LoginName>
       </Protocol>
       <Protocol>
         <Type>SMTP</Type>
-        <Server>mail.example.com</Server>
-        <Port>465</Port>
+        <Server>{{.Config.SMTP.Host}}</Server>
+        <Port>{{.Config.SMTP.Port}}</Port>
         <DomainRequired>off</DomainRequired>
         <SPA>off</SPA>
-        <SSL>on</SSL>
+        <SSL>{{if eq .Config.SMTP.SocketType "SSL"}}on{{else}}off{{end}}</SSL>
         <AuthRequired>on</AuthRequired>
         <LoginName>{{.Email}}</LoginName>
       </Protocol>
