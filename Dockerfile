@@ -11,9 +11,12 @@ ARG TARGETOS TARGETARCH
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -trimpath -ldflags="-s -w" -o /autodiscover .
 
+FROM busybox:uclibc AS tools
+
 FROM scratch
 
 COPY --from=builder /autodiscover /autodiscover
+COPY --from=tools /bin/wget /wget
 
 EXPOSE 8080
 
